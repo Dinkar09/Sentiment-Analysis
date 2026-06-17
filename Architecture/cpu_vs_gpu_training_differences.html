@@ -1,0 +1,244 @@
+
+<style>
+h2.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+.tbl-wrap { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; margin-top: 1rem; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+thead tr { background: var(--color-background-secondary); }
+th { padding: 10px 14px; text-align: left; font-weight: 500; font-size: 12px; color: var(--color-text-secondary); border-bottom: 0.5px solid var(--color-border-tertiary); }
+th:first-child  { width: 22%; }
+th:nth-child(2) { width: 35%; }
+th:nth-child(3) { width: 35%; }
+th:last-child   { width: 8%; text-align: center; }
+td { padding: 9px 14px; vertical-align: top; color: var(--color-text-primary); border-bottom: 0.5px solid var(--color-border-tertiary); line-height: 1.5; }
+td:last-child { text-align: center; }
+tr:last-child td { border-bottom: none; }
+tr.diff-row { background: #EEEDFE22; }
+tr.same-row { background: transparent; }
+.cat { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; display: inline-block; white-space: nowrap; }
+.cat-hw  { background: #E1F5EE; color: #085041; }
+.cat-mem { background: #FAEEDA; color: #633806; }
+.cat-amp { background: #EEEDFE; color: #3C3489; }
+.cat-dl  { background: #FAECE7; color: #712B13; }
+.cat-opt { background: #EAF3DE; color: #27500A; }
+.cat-out { background: #F1EFE8; color: #444441; }
+.badge-diff { background: #EEEDFE; color: #3C3489; font-size: 11px; padding: 2px 7px; border-radius: 99px; font-weight: 500; }
+.badge-same { background: var(--color-background-secondary); color: var(--color-text-tertiary); font-size: 11px; padding: 2px 7px; border-radius: 99px; }
+.cpu-val { color: var(--color-text-primary); }
+.gpu-val { color: #3C3489; font-weight: 500; }
+code { font-family: var(--font-mono); font-size: 12px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; }
+.section-header td { background: var(--color-background-secondary); font-size: 11px; font-weight: 500; color: var(--color-text-secondary); padding: 6px 14px; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.legend { display: flex; gap: 16px; padding: 10px 14px; font-size: 12px; color: var(--color-text-secondary); border-top: 0.5px solid var(--color-border-tertiary); flex-wrap: wrap; align-items: center; }
+</style>
+
+<h2 class="sr-only">Comparison table of CPU vs GPU BERT training across hardware, memory, precision, DataLoader, optimizer, and output differences.</h2>
+
+<div class="tbl-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th><i class="ti ti-cpu" style="font-size:14px;vertical-align:-2px;margin-right:5px" aria-hidden="true"></i>CPU  —  cpuTrained.py</th>
+        <th><i class="ti ti-bolt" style="font-size:14px;vertical-align:-2px;margin-right:5px" aria-hidden="true"></i>GPU  —  gpuTrained.py</th>
+        <th>Same?</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <tr class="section-header"><td colspan="4">Hardware &amp; device</td></tr>
+
+      <tr class="diff-row">
+        <td><span class="cat cat-hw">Device</span></td>
+        <td class="cpu-val"><code>torch.device("cpu")</code></td>
+        <td class="gpu-val"><code>torch.device("cuda")</code> — RTX 3050, 4 GB VRAM</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-hw">Device setup</span></td>
+        <td class="cpu-val">No setup needed</td>
+        <td class="gpu-val"><code>setup_device()</code> — prints GPU name, memory, CUDA version; enables <code>cudnn.benchmark</code></td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-hw">cuDNN tuning</span></td>
+        <td class="cpu-val">Not applicable</td>
+        <td class="gpu-val"><code>torch.backends.cudnn.benchmark = True</code> — auto-selects fastest kernel for fixed input size</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+
+      <tr class="section-header"><td colspan="4">Precision &amp; mixed precision</td></tr>
+
+      <tr class="diff-row">
+        <td><span class="cat cat-amp">Precision</span></td>
+        <td class="cpu-val">fp32 only</td>
+        <td class="gpu-val">fp16 inside <code>autocast</code>, fp32 master weights (AMP)</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-amp">Autocast</span></td>
+        <td class="cpu-val">Not used</td>
+        <td class="gpu-val"><code>torch.amp.autocast(device_type="cuda")</code> wraps forward + loss</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-amp">GradScaler</span></td>
+        <td class="cpu-val">Not used</td>
+        <td class="gpu-val"><code>torch.amp.GradScaler("cuda")</code> — scales loss to prevent fp16 underflow</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-amp">Mask fill value</span></td>
+        <td class="cpu-val"><code>-1e9</code> (safe in fp32)</td>
+        <td class="gpu-val"><code>torch.finfo(scores.dtype).min</code> — avoids fp16 overflow under AMP</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+
+      <tr class="section-header"><td colspan="4">Memory &amp; tensor transfer</td></tr>
+
+      <tr class="diff-row">
+        <td><span class="cat cat-mem">Tensor transfer</span></td>
+        <td class="cpu-val"><code>.to(device)</code></td>
+        <td class="gpu-val"><code>.to(device, non_blocking=True)</code> — overlaps copy with compute</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-mem">GPU cache</span></td>
+        <td class="cpu-val">Not applicable</td>
+        <td class="gpu-val"><code>torch.cuda.empty_cache()</code> called after training</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-mem">Pooled output</span></td>
+        <td class="cpu-val">Stays on CPU natively</td>
+        <td class="gpu-val"><code>pooled.float().cpu()</code> — cast to fp32 before moving off GPU</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+
+      <tr class="section-header"><td colspan="4">DataLoader</td></tr>
+
+      <tr class="diff-row">
+        <td><span class="cat cat-dl">pin_memory</span></td>
+        <td class="cpu-val"><code>pin_memory=False</code></td>
+        <td class="gpu-val"><code>pin_memory=True</code> — pins RAM pages for faster host→GPU DMA</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="same-row">
+        <td><span class="cat cat-dl">num_workers</span></td>
+        <td class="cpu-val"><code>num_workers=0</code></td>
+        <td class="gpu-val"><code>num_workers=0</code></td>
+        <td><span class="badge-same">Same</span></td>
+      </tr>
+      <tr class="same-row">
+        <td><span class="cat cat-dl">Batch size</span></td>
+        <td class="cpu-val">32</td>
+        <td class="gpu-val">32</td>
+        <td><span class="badge-same">Same</span></td>
+      </tr>
+
+      <tr class="section-header"><td colspan="4">Optimizer &amp; training loop</td></tr>
+
+      <tr class="same-row">
+        <td><span class="cat cat-opt">Optimizer</span></td>
+        <td class="cpu-val">AdamW  lr=2e-4  wd=0.01</td>
+        <td class="gpu-val">AdamW  lr=2e-4  wd=0.01</td>
+        <td><span class="badge-same">Same</span></td>
+      </tr>
+      <tr class="same-row">
+        <td><span class="cat cat-opt">Scheduler</span></td>
+        <td class="cpu-val">Linear warm-up → decay</td>
+        <td class="gpu-val">Linear warm-up → decay</td>
+        <td><span class="badge-same">Same</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-opt">Backward pass</span></td>
+        <td class="cpu-val"><code>loss.backward()</code></td>
+        <td class="gpu-val"><code>scaler.scale(loss).backward()</code></td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-opt">Optimizer step</span></td>
+        <td class="cpu-val"><code>optimizer.step()</code></td>
+        <td class="gpu-val"><code>scaler.unscale_() → clip → scaler.step() → scaler.update()</code></td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="same-row">
+        <td><span class="cat cat-opt">Grad clipping</span></td>
+        <td class="cpu-val"><code>clip_grad_norm_  max=1.0</code></td>
+        <td class="gpu-val"><code>clip_grad_norm_  max=1.0</code></td>
+        <td><span class="badge-same">Same</span></td>
+      </tr>
+      <tr class="same-row">
+        <td><span class="cat cat-opt">Epochs</span></td>
+        <td class="cpu-val">5</td>
+        <td class="gpu-val">5</td>
+        <td><span class="badge-same">Same</span></td>
+      </tr>
+      <tr class="same-row">
+        <td><span class="cat cat-opt">Loss function</span></td>
+        <td class="cpu-val">CrossEntropyLoss</td>
+        <td class="gpu-val">CrossEntropyLoss</td>
+        <td><span class="badge-same">Same</span></td>
+      </tr>
+
+      <tr class="section-header"><td colspan="4">Model architecture</td></tr>
+
+      <tr class="same-row">
+        <td><span class="cat cat-opt">Architecture</span></td>
+        <td class="cpu-val">BERT-Small  layers=4  heads=4  hidden=256</td>
+        <td class="gpu-val">BERT-Small  layers=4  heads=4  hidden=256</td>
+        <td><span class="badge-same">Same</span></td>
+      </tr>
+      <tr class="same-row">
+        <td><span class="cat cat-opt">Parameters</span></td>
+        <td class="cpu-val">10,022,403 trainable</td>
+        <td class="gpu-val">10,022,403 trainable</td>
+        <td><span class="badge-same">Same</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-opt">Model placement</span></td>
+        <td class="cpu-val"><code>.to(cpu)</code>  — stays in RAM</td>
+        <td class="gpu-val"><code>.to(cuda:0)</code>  — loaded into VRAM</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+
+      <tr class="section-header"><td colspan="4">Performance &amp; outputs</td></tr>
+
+      <tr class="diff-row">
+        <td><span class="cat cat-out">Epoch time</span></td>
+        <td class="cpu-val">~3–5 min / epoch (est.)</td>
+        <td class="gpu-val">~22 s / epoch (observed)</td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="same-row">
+        <td><span class="cat cat-out">Best val acc</span></td>
+        <td class="cpu-val">~63% (same config)</td>
+        <td class="gpu-val">63.55%</td>
+        <td><span class="badge-same">Same</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-out">Checkpoint file</span></td>
+        <td class="cpu-val"><code>best_model.pt</code></td>
+        <td class="gpu-val"><code>best_model_gpu.pt</code></td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="diff-row">
+        <td><span class="cat cat-out">Training log</span></td>
+        <td class="cpu-val"><code>training_log.json</code></td>
+        <td class="gpu-val"><code>training_log_gpu.json</code></td>
+        <td><span class="badge-diff">Diff</span></td>
+      </tr>
+      <tr class="same-row">
+        <td><span class="cat cat-out">Final output</span></td>
+        <td class="cpu-val"><code>BERT_FINAL_OUTPUT.json</code>  [31232, 256]</td>
+        <td class="gpu-val"><code>BERT_FINAL_OUTPUT.json</code>  [31232, 256]</td>
+        <td><span class="badge-same">Same</span></td>
+      </tr>
+
+    </tbody>
+  </table>
+  <div class="legend">
+    <span style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#EEEDFE;border:0.5px solid #AFA9EC"></span> Highlighted row = difference</span>
+    <span><span class="badge-diff">Diff</span> = changed between files</span>
+    <span><span class="badge-same">Same</span> = identical in both files</span>
+    <span style="margin-left:auto"><button onclick="sendPrompt('Explain why AMP mixed precision speeds up GPU training')">Why does AMP speed up training? ↗</button></span>
+  </div>
+</div>
