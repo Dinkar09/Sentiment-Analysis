@@ -146,3 +146,11 @@ To execute, initialize, or retrain the system platform, developers run the core 
 3. **Hardware Agnostic Runtime Configuration:** The user interface relies on dynamic asset loading. As your engineers refine newer versions of the neural architecture, you can drop updated weights into the checkpoints folder, and the application will instantly adapt to the new layout without requiring code rewrites.
 
 ---
+
+---
+
+## 6. Parameters learned by each Model
+
+**Both your CPU-trained BERT-Small (256 hidden, 4 layers, 4 heads) and GPU-trained BERT-Small (384 hidden, 6 layers, 6 heads) learned 10,022,403 and approximately 34,869,251 trainable parameters respectively.**
+
+---
