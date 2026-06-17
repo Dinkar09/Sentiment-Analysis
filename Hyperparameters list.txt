@@ -1,0 +1,69 @@
+1. First Experiment
+
+# ── Model Hyperparameters ────────────────────────────────────────────────
+    HIDDEN_SIZE       = 256
+    NUM_LAYERS        = 4
+    NUM_HEADS         = 4
+    INTERMEDIATE_SIZE = 512
+    MAX_LEN           = 128
+    TYPE_VOCAB_SIZE   = 2
+    NUM_CLASSES       = 3       # negative=0 | neutral=1 | positive=2
+    DROPOUT           = 0.1
+    CLASSIFIER_DROP   = 0.3
+
+    # ── Training Hyperparameters ─────────────────────────────────────────────
+    BATCH_SIZE   = 32
+    EPOCHS       = 5
+    LR           = 2e-4
+    WEIGHT_DECAY = 0.01
+    WARMUP_RATIO = 0.1
+    GRAD_CLIP    = 1.0
+    TRAIN_SPLIT  = 0.8
+
+2. Second Experiment
+
+# ── Model Hyperparameters ────────────────────────────────────────────────
+HIDDEN_SIZE       = 384     # was 256 — more representational capacity
+NUM_LAYERS        = 6       # was 4  — deeper encoder
+NUM_HEADS         = 6       # was 4  — must divide HIDDEN_SIZE (384/6=64)
+INTERMEDIATE_SIZE = 1536    # was 512 — standard 4x hidden_size ratio
+MAX_LEN           = 128     # unchanged
+TYPE_VOCAB_SIZE   = 2        # unchanged
+NUM_CLASSES       = 3        # unchanged
+DROPOUT           = 0.1      # unchanged
+CLASSIFIER_DROP   = 0.2     # was 0.3 — slightly less since model is bigger/underfit
+
+# ── Training Hyperparameters ─────────────────────────────────────────────
+BATCH_SIZE   = 32           # keep at 32 (or try 24 if you hit OOM with bigger model)
+EPOCHS       = 12           # was 5 — model hasn't converged yet
+LR           = 1e-4         # was 2e-4 — lower LR for the bigger, deeper model
+WEIGHT_DECAY = 0.01          # unchanged
+WARMUP_RATIO = 0.1           # unchanged
+GRAD_CLIP    = 1.0           # unchanged
+TRAIN_SPLIT  = 0.8           # unchanged
+
+3. Third Experiment (Finalized for training with GPU)
+
+# ── Model Hyperparameters ────────────────────────────────────────────────────
+HIDDEN_SIZE       = 384     # keep — good representational capacity
+NUM_LAYERS        = 6       # keep — deeper encoder
+NUM_HEADS         = 6       # keep — 384/6 = 64 per head ✓
+INTERMEDIATE_SIZE = 1536    # keep — standard 4× ratio
+MAX_LEN           = 128     # unchanged
+TYPE_VOCAB_SIZE   = 2       # unchanged
+NUM_CLASSES       = 3       # unchanged
+DROPOUT           = 0.2     # slight increase → more regularisation
+CLASSIFIER_DROP   = 0.3     # restored to 0.3 → classifier needs more dropout
+
+# ── Training Hyperparameters ─────────────────────────────────────────────────
+BATCH_SIZE        = 32      # keep — stable for 4GB VRAM with AMP
+EPOCHS            = 20      # increased — lower LR needs more epochs to converge
+LR                = 1e-4    # ← KEY FIX: was 4e-4 (comment said "lower" but was higher!)
+                            # 1e-4 is the standard for training BERT from scratch
+WEIGHT_DECAY      = 0.01    # unchanged
+WARMUP_RATIO      = 0.15    # increased from 0.1 — more stable warmup for scratch training
+GRAD_CLIP         = 1.0     # unchanged
+TRAIN_SPLIT       = 0.8     # unchanged
+LABEL_SMOOTHING   = 0.1     # NEW — prevents overconfidence, helps generalisation
+SCHEDULER         = "cosine" # NEW — cosine annealing instead of linear decay
+                              #       avoids the sudden drop after warmup ends

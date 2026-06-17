@@ -1,0 +1,14 @@
+# Core Machine Learning Framework
+torch>=2.0.0
+
+# Natural Language Processing & Tokenization
+transformers>=4.30.0
+
+# Machine Learning Utilities & Evaluation Metrics
+scikit-learn>=1.2.0
+
+# Web Application Interface
+streamlit>=1.25.0
+
+# Data Manipulation and Ingestion
+pandas>=2.0.0
